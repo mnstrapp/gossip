@@ -34,7 +34,7 @@ deps_grpc:
 			-DgRPC_BUILD_TESTS=OFF \
 			-DCMAKE_INSTALL_PREFIX=${PREFIX_PATH} \
 			../.. && \
-			make -j $(shell bc <<<"$(nproc)/2") && \
+			make -j4 && \
 			make install; \
 	fi
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
