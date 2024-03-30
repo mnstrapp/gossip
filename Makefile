@@ -5,13 +5,17 @@ TEMP_PATH := /tmp/mnstrapp/gossip
 CWD_PATH = $(shell pwd)
 
 .PHONY: all
-all: clean deps gen build
+all: clean build
 
-deps: deps_structure deps_grpc
+deps: deps_structure deps_submodules deps_grpc
 
 deps_structure:
 	mkdir -p ${PREFIX_PATH}
 	mkdir -p ${TEMP_PATH}
+
+deps_submodules:
+	git submodule init
+	git submodule update
 
 deps_grpc:
 	if ! command -v protoc &> /dev/null; then \
@@ -36,7 +40,7 @@ deps_grpc:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
 
-gen:
+gen: deps
 	protoc \
 		--proto_path=${CWD_PATH}/proto \
 		--go_out=${CWD_PATH}/gossip/ \
@@ -45,7 +49,7 @@ gen:
 		--plugin=protoc-gen-go-grpc=$(shell go env GOPATH)/bin/protoc-gen-go-grpc \
 		gossip.proto
 
-build:
+build: gen
 	go build -o ${CWD_PATH}/target/mnstrapp-gossip
 
 install: build
