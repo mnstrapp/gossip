@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 
 	"github.com/mnstrapp/gossip/gossip"
 )
@@ -19,6 +20,9 @@ func init() {
 	flag.IntVar(&port, "port", 0, "Gossip port")
 	flag.Parse()
 
+	if p, ok := os.LookupEnv("PORT"); ok {
+		port, _ = strconv.Atoi(p)
+	}
 	if port == 0 {
 		port = getRandomPort()
 	}

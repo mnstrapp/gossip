@@ -1,0 +1,22 @@
+# flyctl launch added from .gitignore
+# Misc metadata
+**/.DS_Store
+**/*.sw*
+
+# IDE metadata
+**/.vscode
+**/.idea
+
+# Artifacts
+target
+
+# flyctl launch added from proto/.gitignore
+# Misc metadata
+proto/**/.DS_Store
+proto/**/*.sw*
+
+# IDE metadata
+proto/**/.vscode
+proto/**/.idea
+
+fly.toml
