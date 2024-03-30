@@ -40,7 +40,7 @@ deps_grpc:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
 
-gen: deps
+gen:
 	protoc \
 		--proto_path=${CWD_PATH}/proto \
 		--go_out=${CWD_PATH}/gossip/ \
