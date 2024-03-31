@@ -58,6 +58,7 @@ func (s *service) UnsubscribeFromEvents(ctx context.Context, user *User) (*empty
 		log.Error(err)
 		return nil, err
 	}
+	log.Info(fmt.Sprintf("%s unsubscribed from events", user.Id))
 	eventChan <- userLeftEvent(user.Id)
 	if _, ok := streams[user.Id]; ok {
 		doneChan <- user.Id
