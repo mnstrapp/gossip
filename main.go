@@ -11,13 +11,11 @@ import (
 )
 
 var (
-	host string
 	port int
 )
 
 func init() {
-	flag.StringVar(&host, "host", "0.0.0.0", "Gossip host")
-	flag.IntVar(&port, "port", 0, "Gossip port")
+	flag.IntVar(&port, "port", 3000, "Gossip port")
 	flag.Parse()
 
 	if p, ok := os.LookupEnv("PORT"); ok {
@@ -29,7 +27,7 @@ func init() {
 }
 
 func main() {
-	uri := fmt.Sprintf("%s:%d", host, port)
+	uri := fmt.Sprintf(":%d", port)
 	server := gossip.NewServer(uri)
 	fmt.Fprintf(os.Stdout, "[INFO] server listening at %s\n", uri)
 	if err := server.Listen(); err != nil {

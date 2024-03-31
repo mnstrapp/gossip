@@ -7,9 +7,9 @@ import (
 )
 
 func Info(msg string) {
-	fmt.Fprintf(os.Stdout, "[INFO] %s - %s", time.Now(), msg)
+	fmt.Fprintf(os.Stdout, "[INFO] %s - %s\n", time.Now(), msg)
 }
 
 func Error(err error) {
-	fmt.Fprintf(os.Stderr, "[Error] %s - %s", time.Now(), err)
+	fmt.Fprintf(os.Stderr, "[Error] %s - %s\n", time.Now(), err)
 }
