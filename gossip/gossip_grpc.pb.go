@@ -11,7 +11,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -24,8 +23,8 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GossipApiClient interface {
 	SubscribeToEvents(ctx context.Context, in *User, opts ...grpc.CallOption) (GossipApi_SubscribeToEventsClient, error)
-	SendEvent(ctx context.Context, in *Event, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	UnsubscribeFromEvents(ctx context.Context, in *User, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SendEvent(ctx context.Context, in *Event, opts ...grpc.CallOption) (*Empty, error)
+	UnsubscribeFromEvents(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type gossipApiClient struct {
@@ -68,8 +67,8 @@ func (x *gossipApiSubscribeToEventsClient) Recv() (*Event, error) {
 	return m, nil
 }
 
-func (c *gossipApiClient) SendEvent(ctx context.Context, in *Event, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
+func (c *gossipApiClient) SendEvent(ctx context.Context, in *Event, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
 	err := c.cc.Invoke(ctx, "/gossip.GossipApi/SendEvent", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -77,8 +76,8 @@ func (c *gossipApiClient) SendEvent(ctx context.Context, in *Event, opts ...grpc
 	return out, nil
 }
 
-func (c *gossipApiClient) UnsubscribeFromEvents(ctx context.Context, in *User, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
+func (c *gossipApiClient) UnsubscribeFromEvents(ctx context.Context, in *User, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
 	err := c.cc.Invoke(ctx, "/gossip.GossipApi/UnsubscribeFromEvents", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -91,8 +90,8 @@ func (c *gossipApiClient) UnsubscribeFromEvents(ctx context.Context, in *User, o
 // for forward compatibility
 type GossipApiServer interface {
 	SubscribeToEvents(*User, GossipApi_SubscribeToEventsServer) error
-	SendEvent(context.Context, *Event) (*emptypb.Empty, error)
-	UnsubscribeFromEvents(context.Context, *User) (*emptypb.Empty, error)
+	SendEvent(context.Context, *Event) (*Empty, error)
+	UnsubscribeFromEvents(context.Context, *User) (*Empty, error)
 	mustEmbedUnimplementedGossipApiServer()
 }
 
@@ -103,10 +102,10 @@ type UnimplementedGossipApiServer struct {
 func (UnimplementedGossipApiServer) SubscribeToEvents(*User, GossipApi_SubscribeToEventsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeToEvents not implemented")
 }
-func (UnimplementedGossipApiServer) SendEvent(context.Context, *Event) (*emptypb.Empty, error) {
+func (UnimplementedGossipApiServer) SendEvent(context.Context, *Event) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendEvent not implemented")
 }
-func (UnimplementedGossipApiServer) UnsubscribeFromEvents(context.Context, *User) (*emptypb.Empty, error) {
+func (UnimplementedGossipApiServer) UnsubscribeFromEvents(context.Context, *User) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UnsubscribeFromEvents not implemented")
 }
 func (UnimplementedGossipApiServer) mustEmbedUnimplementedGossipApiServer() {}

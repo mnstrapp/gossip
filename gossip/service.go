@@ -1,96 +1,86 @@
 package gossip
 
 import (
-	context "context"
+	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/mnstrapp/gossip/log"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
-
-var streams = make(map[string]GossipApi_SubscribeToEventsServer)
-var eventChan = make(chan *Event)
-var doneChan = make(chan string)
 
 type service struct {
 	UnimplementedGossipApiServer
-	Context context.Context
 }
 
 func (s *service) SubscribeToEvents(user *User, stream GossipApi_SubscribeToEventsServer) error {
-	id := user.GetId()
-	if _, ok := streams[id]; !ok {
-		streams[id] = stream
-	}
-	log.Info(fmt.Sprintf("%s subscribed to events", user.Id))
+	log.Infof("%s subscribed to events", user.Id)
 	broadcastEvent(userJoinedEvent(user))
 
+	ctx := context.Background()
+	pubsub := redisClient.Subscribe(ctx, "events")
+	_, err := pubsub.Receive(ctx)
+	if err != nil {
+		log.Errorf("receiving from redis: %s", err)
+	}
+	subChan := pubsub.Channel()
+
 	for {
-		select {
-		case event := <-eventChan:
-			broadcastEvent(event)
+		redisMessage := <-subChan
+		eventMessage := []byte(redisMessage.Payload)
+
+		var event Event
+		if err := json.Unmarshal(eventMessage, &event); err != nil {
+			log.Errorf("unmarshaling event message: %s", err)
+		}
+
+		if event.Type == EventType_DoneEventType && event.GetDone().UserId == user.Id {
+			broadcastEvent(userLeftEvent(user.Id))
+			pubsub.Close()
+			return nil
+		}
+		log.Infof("event.FromId: %s, user.Id: %s", *event.FromId, user.Id)
+		if event.ToId != nil && *event.ToId != user.Id {
 			continue
-		case id := <-doneChan:
-			if id == user.Id {
-				return nil
-			}
+		}
+		if event.FromId != nil && *event.FromId == user.Id {
 			continue
-		default:
-			continue
+		}
+		if err := stream.Send(&event); err != nil {
+			log.Errorf("sending event: %s", err)
 		}
 	}
 }
 
-func (s *service) SendEvent(ctx context.Context, event *Event) (*emptypb.Empty, error) {
+func (s *service) SendEvent(ctx context.Context, event *Event) (*Empty, error) {
 	if event == nil {
 		err := fmt.Errorf("empty event")
 		log.Error(err)
 		return nil, err
 	}
-	eventChan <- event
+	broadcastEvent(event)
 	return nil, nil
 }
 
-func (s *service) UnsubscribeFromEvents(ctx context.Context, user *User) (*emptypb.Empty, error) {
+func (s *service) UnsubscribeFromEvents(ctx context.Context, user *User) (*Empty, error) {
 	if user == nil {
 		err := fmt.Errorf("empty user")
 		log.Error(err)
 		return nil, err
 	}
-	log.Info(fmt.Sprintf("%s unsubscribed from events", user.Id))
-	eventChan <- userLeftEvent(user.Id)
-	if _, ok := streams[user.Id]; ok {
-		doneChan <- user.Id
-		delete(streams, user.Id)
-	}
+	log.Infof("%s unsubscribed from events", user.Id)
+	broadcastEvent(doneEvent(user.Id))
 	return nil, nil
 }
 
 func broadcastEvent(event *Event) {
-	if event.ToId != nil {
-		dmEvent(event)
+	eventMessage, err := json.Marshal(event)
+	if err != nil {
+		log.Errorf("broadcasting: marshaling event message: %s", err)
 		return
 	}
-	for id, stream := range streams {
-		if event.FromId != nil && id == *event.FromId {
-			continue
-		}
-		if err := stream.Send(event); err != nil {
-			log.Error(fmt.Errorf("error sending broadcast: %s", err))
-		}
-	}
-}
-
-func dmEvent(event *Event) {
-	stream, ok := streams[*event.FromId]
-	if !ok {
-		log.Info(fmt.Sprintf("user %s left", *event.FromId))
-		dmEvent(userLeftEvent(*event.ToId))
-		return
-	}
-	if err := stream.Send(event); err != nil {
-		log.Error(err)
+	if err := redisClient.Publish(context.Background(), "events", eventMessage).Err(); err != nil {
+		log.Errorf("broadcasting: publishing event: %s", err)
 	}
 }
 
@@ -99,11 +89,9 @@ func userJoinedEvent(user *User) *Event {
 		Type:      EventType_UserEventType,
 		FromId:    &user.Id,
 		Timestamp: uint64(time.Now().Unix()),
-		Body: &Event_User{
-			User: &UserEvent{
-				UserId: user.Id,
-				Status: NetworkStatus_Online,
-			},
+		User: &UserEvent{
+			UserId: user.Id,
+			Status: NetworkStatus_Online,
 		},
 	}
 }
@@ -113,11 +101,21 @@ func userLeftEvent(id string) *Event {
 		Type:      EventType_UserEventType,
 		FromId:    &id,
 		Timestamp: uint64(time.Now().Unix()),
-		Body: &Event_User{
-			User: &UserEvent{
-				UserId: id,
-				Status: NetworkStatus_Offline,
-			},
+		User: &UserEvent{
+			UserId: id,
+			Status: NetworkStatus_Offline,
+		},
+	}
+}
+
+func doneEvent(id string) *Event {
+	return &Event{
+		Type:      EventType_DoneEventType,
+		FromId:    &id,
+		Timestamp: uint64(time.Now().Unix()),
+		Done: &DoneEvent{
+			UserId: id,
+			Status: NetworkStatus_Offline,
 		},
 	}
 }

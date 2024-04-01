@@ -8,3 +8,4 @@
 
 # Artifacts
 /target
+fly.toml
