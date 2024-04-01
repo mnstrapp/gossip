@@ -39,7 +39,6 @@ func (s *service) SubscribeToEvents(user *User, stream GossipApi_SubscribeToEven
 			pubsub.Close()
 			return nil
 		}
-		log.Infof("event.FromId: %s, user.Id: %s", *event.FromId, user.Id)
 		if event.ToId != nil && *event.ToId != user.Id {
 			continue
 		}

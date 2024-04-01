@@ -1,6 +1,7 @@
 package gossip
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mnstrapp/gossip/log"
@@ -19,5 +20,11 @@ func NewRedisClient(url string) (*redis.Client, error) {
 		return nil, err
 	}
 	redisClient = redis.NewClient(options)
+	_, err = redisClient.Ping(context.Background()).Result()
+	if err != nil {
+		log.Errorf("failed to ping redis: %s", err)
+		return nil, err
+	}
+	log.Info("redis connected")
 	return redisClient, nil
 }
