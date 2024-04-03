@@ -3,7 +3,9 @@ package gossip
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/mnstrapp/gossip/log"
@@ -17,7 +19,7 @@ func (s *service) SubscribeToEvents(user *User, stream GossipApi_SubscribeToEven
 	log.Infof("%s subscribed to events", user.Id)
 	broadcastEvent(userJoinedEvent(user))
 
-	ctx := context.Background()
+	ctx := stream.Context()
 	pubsub := redisClient.Subscribe(ctx, "events")
 	_, err := pubsub.Receive(ctx)
 	if err != nil {
@@ -59,6 +61,56 @@ func (s *service) SendEvent(ctx context.Context, event *Event) (*Empty, error) {
 	}
 	broadcastEvent(event)
 	return nil, nil
+}
+
+func (s *service) StreamEvents(stream GossipApi_StreamEventsServer) error {
+	log.Info("streaming events")
+
+	// handle incoming events
+	go func() {
+		for {
+			event, err := stream.Recv()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					return
+				}
+				log.Errorf("receiving from stream: %s", err)
+				return
+			}
+			if event == nil {
+				log.Errorf("empty event")
+				continue
+			}
+			broadcastEvent(event)
+		}
+	}()
+
+	// handle outgoing events
+	ctx := stream.Context()
+	pubsub := redisClient.Subscribe(ctx, "events")
+	_, err := pubsub.Receive(ctx)
+	if err != nil {
+		log.Errorf("receiving from redis: %s", err)
+	}
+	subChan := pubsub.Channel()
+	for {
+		redisMessage := <-subChan
+		eventMessage := []byte(redisMessage.Payload)
+
+		var event Event
+		if err := json.Unmarshal(eventMessage, &event); err != nil {
+			log.Errorf("unmarshaling event message: %s", err)
+			return err
+		}
+
+		if event.Type == EventType_DoneEventType {
+			pubsub.Close()
+			return nil
+		}
+		if err := stream.Send(&event); err != nil {
+			log.Errorf("sending event: %s", err)
+		}
+	}
 }
 
 func (s *service) UnsubscribeFromEvents(ctx context.Context, user *User) (*Empty, error) {
